@@ -1,0 +1,91 @@
+stages:
+  - build
+  - deploy
+
+build-dev:
+  stage: build
+  only:
+    - dev
+  image: docker:18.09.7-dind
+  services:
+    - name: docker:18.09.7-dind
+
+  before_script:
+  - docker logout $CI_REGISTRY_URL
+  - mkdir ~/.docker && touch ~/.docker/config.json && cp $DOCKER_AUTH_CONFIG ~/.docker/config.json
+  - docker login $CI_REGISTRY_URL
+  script:
+    - mv $DEV_ENV .env
+    - cat .env
+    - docker build --tag $CI_REGISTRY_URL/$DEV_REGISTRY_NAME:$CI_COMMIT_SHA --tag $CI_REGISTRY_URL/$DEV_REGISTRY_NAME:latest -f Dockerfile .
+    - docker push $CI_REGISTRY_URL/$DEV_REGISTRY_NAME:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_URL/$DEV_REGISTRY_NAME:latest
+deploy-dev:
+  image: alpine
+  stage: deploy
+
+  script:
+    - chmod og= $DEV_ID_RSA
+    - sed -i 's/https/http/' /etc/apk/repositories
+    - apk update && apk add openssh-client
+    - ssh -i $DEV_ID_RSA -o StrictHostKeyChecking=no $DEV_SERVER_USER@$DEV_SERVER_IP "cd /opt/sop-backend-auth && docker compose pull customer && docker compose up -d"
+  only:
+    - dev
+
+build-stg:
+  stage: build
+  only:
+    - stg
+  image: docker:18.09.7-dind
+  services:
+    - name: docker:18.09.7-dind
+
+  before_script:
+  - docker logout $CI_REGISTRY_URL
+  - mkdir ~/.docker && touch ~/.docker/config.json && cp $DOCKER_AUTH_CONFIG ~/.docker/config.json
+  - docker login $CI_REGISTRY_URL
+  script:
+    - mv $STG_ENV .env
+    - cat .env
+    - docker build --tag $CI_REGISTRY_URL/$STG_REGISTRY_NAME:$CI_COMMIT_SHA --tag $CI_REGISTRY_URL/$STG_REGISTRY_NAME:latest -f Dockerfile .
+    - docker push $CI_REGISTRY_URL/$STG_REGISTRY_NAME:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_URL/$STG_REGISTRY_NAME:latest
+deploy-stg:
+  image: alpine
+  stage: deploy
+  script:
+    - chmod og= $STG_ID_RSA
+    - sed -i 's/https/http/' /etc/apk/repositories
+    - apk update && apk add openssh-client
+    - ssh -i $STG_ID_RSA -o StrictHostKeyChecking=no $STG_SERVER_USER@$STG_SERVER_IP "docker service update --force --with-registry-auth --image $CI_REGISTRY_URL/$STG_REGISTRY_NAME sop_customer"
+  only:
+    - stg
+
+build-uat:
+  stage: build
+  only:
+    - uat
+  image: docker:18.09.7-dind
+  services:
+    - name: docker:18.09.7-dind
+
+  before_script:
+  - docker logout $CI_REGISTRY_URL
+  - mkdir ~/.docker && touch ~/.docker/config.json && cp $DOCKER_AUTH_CONFIG ~/.docker/config.json
+  - docker login $CI_REGISTRY_URL
+  script:
+    - mv $UAT_ENV .env
+    - cat .env
+    - docker build --tag $CI_REGISTRY_URL/$UAT_REGISTRY_NAME:$CI_COMMIT_SHA --tag $CI_REGISTRY_URL/$UAT_REGISTRY_NAME:latest -f Dockerfile .
+    - docker push $CI_REGISTRY_URL/$UAT_REGISTRY_NAME:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_URL/$UAT_REGISTRY_NAME:latest
+deploy-uat:
+  image: alpine
+  stage: deploy
+  script:
+    - chmod og= $UAT_ID_RSA
+    - sed -i 's/https/http/' /etc/apk/repositories
+    - apk update && apk add openssh-client
+    - ssh -i $UAT_ID_RSA -o StrictHostKeyChecking=no $UAT_SERVER_USER@$UAT_SERVER_IP "cd /opt/sop && docker service update --force --with-registry-auth --image $CI_REGISTRY_URL/$UAT_REGISTRY_NAME sop_customer"
+  only:
+    - uat

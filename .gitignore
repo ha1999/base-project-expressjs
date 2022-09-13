@@ -1,0 +1,9 @@
+.idea/
+node_modules/
+dist
+*.log
+src/config
+src/test.js
+docs/doc.json
+/config
+.env
