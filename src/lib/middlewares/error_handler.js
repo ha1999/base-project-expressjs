@@ -16,7 +16,7 @@ export function error404() {
  */
 export function errorHandler() {
     return function (error, req, res, next) {
-        console.log("ERROR: ", req.action, error.message);
+        // console.log("ERROR: ", req.action, error.message);
         res.sendError({
             code: error.code,
             message: "Error " + (req.action || "call api."),
