@@ -20,11 +20,6 @@ const app = express();
 
 mysql_init(config.mysql);
 
-if (config.environment === 'production') {
-    process.env['http_proxy'] = 'http://118.70.7.229:80/';
-    process.env['https_proxy'] = 'http://118.70.7.229:80/';
-}
-
 app.disable('x-powered-by');
 app.set('trust proxy', true);
 app.use(cors({
@@ -32,11 +27,9 @@ app.use(cors({
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
 }));
 app.use(morgan(':remote-addr :remote-user :user-agent :method :url HTTP/:http-version :status :res[content-length] - :response-time ms'));
-app.use(response());
 app.use(extractUserInfo);
 app.use(body_parser.json({limit: '50mb'}));
 app.use(body_parser.urlencoded({extended: false, limit: '50mb'}));
-
 app.get('/server-info', (req, res, next) => {
     res.json({
         status: "running",
@@ -52,7 +45,6 @@ app.use('/api/', routes);
 
 app.use(error404());
 app.use(errorHandler());
-
 
 app.listen(config.http.port, () => {
     console.log(`\nStart server at: ${new Date()}
