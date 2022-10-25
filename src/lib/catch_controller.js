@@ -1,5 +1,10 @@
-const catchController =  (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).then(data => res.sendJson({data})).catch((err) => next(err));
+const catchController =  (fn) => async (req, res, next) => {
+  try {
+    const data = await fn(req, res, next);
+    return res.sendJson({data});
+  } catch (error) {
+    next(err);
+  }
 };
 
 export default catchController;
